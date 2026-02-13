@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="screen-orientation" content="landscape">
+  <title>Valentine PvZ Mini Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+
+    body {
+      font-family: 'Comic Sans MS', 'Chalkboard', cursive, sans-serif;
+      background: linear-gradient(180deg, #87ceeb 0%, #98d98e 35%, #6b8e23 70%, #4a6741 100%);
+      cursor: default;
+      position: relative;
+    }
+
+    /* Floating background particles */
+    .bg-particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .bg-particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      animation: float-particle 8s ease-in-out infinite;
+    }
+    .bg-particle:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; }
+    .bg-particle:nth-child(2) { left: 25%; top: 60%; animation-delay: 1.5s; }
+    .bg-particle:nth-child(3) { left: 45%; top: 30%; animation-delay: 3s; }
+    .bg-particle:nth-child(4) { left: 70%; top: 50%; animation-delay: 0.5s; }
+    .bg-particle:nth-child(5) { left: 85%; top: 25%; animation-delay: 2s; }
+    .bg-particle:nth-child(6) { left: 55%; top: 75%; animation-delay: 4s; }
+    @keyframes float-particle {
+      0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+      50% { transform: translate(15px, -20px) scale(1.2); opacity: 0.8; }
+    }
+
+    /* Game container */
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2vh 5vw;
+    }
+
+    /* Peashooter plant - left side (PvZ style: round head, tube mouth right, stem, leaves) */
+    #plant-shooter {
+      position: relative;
+      width: clamp(90px, 16vw, 150px);
+      height: clamp(120px, 22vw, 200px);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.1s ease;
+    }
+    #plant-shooter:active { transform: scale(0.95); }
+    #plant-shooter.shoot { animation: plant-bounce 0.3s ease; }
+
+    /* Round green head - pea shooter style */
+    .plant-head {
+      position: absolute;
+      top: 8%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 58%;
+      height: 42%;
+      background: linear-gradient(145deg, #7cb342 0%, #8bc34a 40%, #689f38 100%);
+      border-radius: 50%;
+      border: 2px solid #558b2f;
+      box-shadow: inset 4px 4px 12px rgba(255,255,255,0.25);
+      animation: plant-idle 2s ease-in-out infinite;
+    }
+    /* Two small close black eyes */
+    .plant-eye {
+      position: absolute;
+      top: 38%;
+      width: 8px;
+      height: 8px;
+      background: #1a1a1a;
+      border-radius: 50%;
+      animation: eye-blink 4s ease-in-out infinite;
+    }
+    .plant-eye.left { left: 22%; }
+    .plant-eye.right { right: 22%; }
+    /* Big tube / shooting mouth on the RIGHT side */
+    .plant-mouth-tube {
+      position: absolute;
+      top: 32%;
+      right: -18%;
+      width: 28%;
+      height: 36%;
+      background: linear-gradient(180deg, #558b2f 0%, #33691e 60%, #1b5e20 100%);
+      border-radius: 50% 20% 20% 50%;
+      border: 2px solid #2e7d32;
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.3);
+    }
+    /* Small leaf appendage on the LEFT, curved up */
+    .plant-leaf-left {
+      position: absolute;
+      top: 25%;
+      left: -8%;
+      width: 18%;
+      height: 22%;
+      background: linear-gradient(135deg, #8bc34a, #689f38);
+      border-radius: 0 50% 50% 0;
+      border: 2px solid #558b2f;
+      transform: rotate(-25deg);
+      animation: leaf-sway 2.5s ease-in-out infinite;
+    }
+    /* Thin stem */
+    .plant-stem {
+      position: absolute;
+      bottom: 28%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 18%;
+      height: 38%;
+      background: linear-gradient(90deg, #558b2f, #7cb342, #558b2f);
+      border-radius: 8px;
+      border: 1px solid #33691e;
+    }
+    /* Two small leaves at base */
+    .plant-leaf {
+      position: absolute;
+      bottom: 5%;
+      width: 28%;
+      height: 18%;
+      background: linear-gradient(180deg, #8bc34a, #689f38);
+      border-radius: 0 50% 50% 0;
+      border: 1px solid #558b2f;
+    }
+    .plant-leaf.left { left: 28%; transform: rotate(-15deg); }
+    .plant-leaf.right { right: 28%; transform: rotate(15deg) scaleX(-1); }
+    @keyframes plant-idle {
+      0%, 100% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.02); }
+    }
+    @keyframes leaf-sway {
+      0%, 100% { transform: rotate(-25deg); }
+      50% { transform: rotate(-20deg); }
+    }
+    @keyframes eye-blink {
+      0%, 45%, 55%, 100% { transform: scaleY(1); }
+      50% { transform: scaleY(0.1); }
+    }
+    @keyframes plant-bounce {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    /* Pig zombie - right side: PvZ zombie body (suit, tie, pants) + pig head */
+    #zombie-container {
+      position: relative;
+      width: clamp(100px, 20vw, 170px);
+      height: clamp(140px, 28vw, 240px);
+      flex-shrink: 0;
+    }
+
+    #pig-zombie {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      cursor: default;
+      transition: filter 0.1s;
+    }
+    #pig-zombie.hit { animation: zombie-flash 0.2s ease; }
+    #pig-zombie.dead { transform-origin: center bottom; animation: zombie-death 0.8s ease forwards; pointer-events: none; }
+
+    /* Zombie body: tattered brown suit */
+    .zombie-torso {
+      position: absolute;
+      bottom: 22%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 72%;
+      height: 48%;
+      background: linear-gradient(180deg, #8b6914 0%, #6b4e0a 50%, #5c3d0a 100%);
+      border-radius: 8px 8px 4px 4px;
+      border: 2px solid #5c3d0a;
+      box-shadow: inset 0 0 0 4px rgba(0,0,0,0.15);
+    }
+    .zombie-torso .zombie-tie {
+      position: absolute;
+      top: 10%;
+      left: 42%;
+      width: 16%;
+      height: 22%;
+      background: repeating-linear-gradient(90deg, #fff 0, #fff 3px, #e53935 3px, #e53935 6px);
+      border-radius: 2px;
+      transform: rotate(-3deg);
+      z-index: 1;
+    }
+    .zombie-shirt {
+      position: absolute;
+      top: 28%;
+      left: 12%;
+      right: 12%;
+      height: 35%;
+      background: #f5f5dc;
+      border-radius: 2px;
+      border: 1px solid #ddd;
+    }
+    /* Pants - blue, tattered */
+    .zombie-legs {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 65%;
+      height: 22%;
+      background: linear-gradient(180deg, #1565c0 0%, #0d47a1 100%);
+      border-radius: 0 0 6px 6px;
+      border: 2px solid #0d47a1;
+    }
+    .zombie-shoe {
+      position: absolute;
+      bottom: -5%;
+      width: 28%;
+      height: 18%;
+      background: linear-gradient(180deg, #5d4037 0%, #3e2723 100%);
+      border-radius: 0 0 8px 8px;
+      border: 2px solid #4e342e;
+    }
+    .zombie-shoe.left { left: 18%; }
+    .zombie-shoe.right { right: 18%; }
+    /* Arms - gray-green skin, walking pose: left forward, right back */
+    .zombie-arm {
+      position: absolute;
+      width: 16%;
+      height: 38%;
+      background: linear-gradient(90deg, #7d8b6f 0%, #8b9a7b 100%);
+      border-radius: 12px;
+      border: 1px solid #6b7b5b;
+      animation: arm-walk 1.2s ease-in-out infinite;
+    }
+    .zombie-arm.left {
+      bottom: 48%;
+      left: -5%;
+      transform-origin: top right;
+      transform: rotate(-25deg);
+    }
+    .zombie-arm.right {
+      bottom: 50%;
+      right: -5%;
+      transform-origin: top left;
+      transform: rotate(20deg);
+      animation-delay: 0.6s;
+    }
+    @keyframes arm-walk {
+      0%, 100% { transform: rotate(-25deg); }
+      50% { transform: rotate(-15deg); }
+    }
+    .zombie-arm.right { animation-name: arm-walk-right; }
+    @keyframes arm-walk-right {
+      0%, 100% { transform: rotate(20deg); }
+      50% { transform: rotate(30deg); }
+    }
+    /* Pig head (replacing zombie head) */
+    .zombie-head {
+      position: absolute;
+      top: 2%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 55%;
+      height: 38%;
+      background: linear-gradient(180deg, #ffc0cb 0%, #ffb6c1 60%, #ff9aab 100%);
+      border-radius: 50%;
+      border: 2px solid #ff69b4;
+      animation: zombie-sway 3s ease-in-out infinite;
+    }
+    .zombie-ear {
+      position: absolute;
+      top: -8%;
+      width: 24%;
+      height: 28%;
+      background: #ffb6c1;
+      border-radius: 50%;
+      border: 2px solid #ff69b4;
+    }
+    .zombie-ear.left { left: -6%; transform: rotate(-22deg); }
+    .zombie-ear.right { right: -6%; transform: rotate(22deg); }
+    .zombie-eye {
+      position: absolute;
+      top: 40%;
+      width: 10px;
+      height: 12px;
+      background: #1a1a1a;
+      border-radius: 50%;
+    }
+    .zombie-eye.left { left: 24%; }
+    .zombie-eye.right { right: 24%; }
+    .zombie-snout {
+      position: absolute;
+      bottom: 12%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 38%;
+      height: 28%;
+      background: linear-gradient(180deg, #ffe4ec 0%, #ffd1dc 100%);
+      border-radius: 50%;
+      border: 2px solid #ffb6c1;
+    }
+    .zombie-nostril {
+      position: absolute;
+      bottom: 38%;
+      width: 5px;
+      height: 5px;
+      background: #333;
+      border-radius: 50%;
+    }
+    .zombie-nostril.left { left: 26%; }
+    .zombie-nostril.right { right: 26%; }
+    @keyframes zombie-sway {
+      0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+      50% { transform: translateX(-50%) rotate(2deg); }
+    }
+    @keyframes zombie-flash {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(2); }
+    }
+    @keyframes zombie-death {
+      0% { transform: rotate(0deg); opacity: 1; }
+      100% { transform: rotate(90deg) translateY(50px); opacity: 0; }
+    }
+
+    /* Projectile */
+    .pea {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: radial-gradient(circle at 30% 30%, #90ee90, #228b22);
+      border-radius: 50%;
+      border: 2px solid #1a5f1a;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Hit particles */
+    .hit-particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #90ee90;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 15;
+      animation: hit-particle 0.5s ease-out forwards;
+    }
+    @keyframes hit-particle {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+
+    /* Trophy - hidden until zombie dies */
+    #trophy-wrapper {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+    #trophy-wrapper.visible { display: flex; pointer-events: auto; }
+
+    #trophy {
+      width: clamp(80px, 20vw, 140px);
+      height: clamp(100px, 25vw, 180px);
+      cursor: pointer;
+      animation: trophy-pop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+      filter: drop-shadow(4px 4px 8px rgba(0,0,0,0.3));
+    }
+    #trophy:hover { transform: scale(1.05); transition: transform 0.2s; }
+    @keyframes trophy-pop {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Valentine card overlay */
+    #valentine-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    #valentine-overlay.visible { display: flex; opacity: 1; }
+
+    #valentine-card {
+      background: linear-gradient(145deg, #fff5f5, #ffe4e9);
+      padding: clamp(24px, 5vw, 48px);
+      border-radius: 20px;
+      border: 4px solid #ff69b4;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      text-align: center;
+      max-width: 90vw;
+      animation: card-appear 0.5s ease;
+    }
+    #valentine-card .message {
+      font-size: clamp(1.2rem, 4vw, 2rem);
+      color: #c71585;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    #valentine-card .heart {
+      font-size: clamp(2rem, 8vw, 4rem);
+      animation: heart-pulse 1s ease-in-out infinite;
+    }
+    @keyframes card-appear {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes heart-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
+    /* Canvas for fireworks */
+    #fireworks-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 25;
+    }
+
+    /* Mobile portrait: show "please rotate to landscape" */
+    #rotate-prompt {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(180deg, #87ceeb 0%, #98d98e 50%, #6b8e23 100%);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 20px;
+      text-align: center;
+    }
+    #rotate-prompt .rotate-icon {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 24px;
+      animation: rotate-hint 2s ease-in-out infinite;
+    }
+    #rotate-prompt .rotate-text {
+      font-size: 1.25rem;
+      color: #2d5016;
+      font-weight: bold;
+    }
+    @keyframes rotate-hint {
+      0%, 100% { transform: rotate(-30deg); }
+      50% { transform: rotate(30deg); }
+    }
+    @media (max-width: 700px) and (orientation: portrait) {
+      #rotate-prompt { display: flex; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-particles">
+    <span class="bg-particle"></span>
+    <span class="bg-particle"></span>
+    <span class="bg-particle"></span>
+    <span class="bg-particle"></span>
+    <span class="bg-particle"></span>
+    <span class="bg-particle"></span>
+  </div>
+
+  <div id="game-container">
+    <!-- Peashooter: round head, tube on right, stem, two leaves, left leaf -->
+    <div id="plant-shooter">
+      <div class="plant-head">
+        <div class="plant-eye left"></div>
+        <div class="plant-eye right"></div>
+        <div class="plant-mouth-tube"></div>
+        <div class="plant-leaf-left"></div>
+      </div>
+      <div class="plant-stem"></div>
+      <div class="plant-leaf left"></div>
+      <div class="plant-leaf right"></div>
+    </div>
+
+    <!-- Pig zombie: PvZ body (suit, tie, pants, shoes) + pig head -->
+    <div id="zombie-container">
+      <div id="pig-zombie">
+        <div class="zombie-torso">
+          <div class="zombie-tie"></div>
+          <div class="zombie-shirt"></div>
+        </div>
+        <div class="zombie-legs">
+          <div class="zombie-shoe left"></div>
+          <div class="zombie-shoe right"></div>
+        </div>
+        <div class="zombie-arm left"></div>
+        <div class="zombie-arm right"></div>
+        <div class="zombie-head">
+          <div class="zombie-ear left"></div>
+          <div class="zombie-ear right"></div>
+          <div class="zombie-eye left"></div>
+          <div class="zombie-eye right"></div>
+          <div class="zombie-snout">
+            <div class="zombie-nostril left"></div>
+            <div class="zombie-nostril right"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PvZ style trophy: golden cup, laurel handles, square base -->
+  <div id="trophy-wrapper">
+    <svg id="trophy" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="trophyGold" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#ffec8b"/>
+          <stop offset="25%" style="stop-color:#ffd700"/>
+          <stop offset="50%" style="stop-color:#ffec8b"/>
+          <stop offset="75%" style="stop-color:#daa520"/>
+          <stop offset="100%" style="stop-color:#b8860b"/>
+        </linearGradient>
+        <filter id="trophyShine">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="0.5"/>
+          <feOffset dx="1" dy="1"/>
+          <feComposite operator="over" in="SourceGraphic"/>
+        </filter>
+      </defs>
+      <!-- Cup body: wide mouth, narrow waist, wider base (PvZ style) -->
+      <path d="M 32 36 L 36 78 L 40 92 Q 60 98 80 92 L 84 78 L 88 36 Q 60 28 32 36 Z" fill="url(#trophyGold)" stroke="#5c4a1a" stroke-width="2.5" stroke-linejoin="round" filter="url(#trophyShine)"/>
+      <!-- Cup rim highlight -->
+      <ellipse cx="60" cy="36" rx="26" ry="5" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+      <!-- Left laurel handle (leaf shape) -->
+      <path d="M 34 44 Q 12 52 14 68 Q 16 82 34 86 L 37 74 Q 22 70 24 58 Q 26 48 34 44 Z" fill="url(#trophyGold)" stroke="#5c4a1a" stroke-width="2"/>
+      <path d="M 34 54 Q 20 58 22 68 Q 24 76 34 78" fill="none" stroke="#6b5a0a" stroke-width="0.8"/>
+      <!-- Right laurel handle -->
+      <path d="M 86 44 Q 108 52 106 68 Q 104 82 86 86 L 83 74 Q 98 70 96 58 Q 94 48 86 44 Z" fill="url(#trophyGold)" stroke="#5c4a1a" stroke-width="2"/>
+      <path d="M 86 54 Q 100 58 98 68 Q 96 76 86 78" fill="none" stroke="#6b5a0a" stroke-width="0.8"/>
+      <!-- Stem -->
+      <rect x="54" y="90" width="12" height="20" rx="2" fill="url(#trophyGold)" stroke="#5c4a1a" stroke-width="1"/>
+      <!-- Square base with relief -->
+      <rect x="36" y="110" width="48" height="16" rx="3" fill="url(#trophyGold)" stroke="#5c4a1a" stroke-width="2"/>
+      <rect x="40" y="114" width="40" height="8" rx="1" fill="none" stroke="#6b5a0a" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <!-- Shown on mobile portrait: ask to rotate to landscape -->
+  <div id="rotate-prompt">
+    <svg class="rotate-icon" viewBox="0 0 24 24" fill="none" stroke="#2d5016" stroke-width="2">
+      <rect x="4" y="2" width="16" height="20" rx="2"/>
+      <path d="M 9 6 L 15 6 M 9 10 L 15 10"/>
+    </svg>
+    <p class="rotate-text">小公主请横屏</p>
+  </div>
+
+  <div id="valentine-overlay">
+    <div id="valentine-card">
+      <p class="message">宝宝我爱你，情人节快乐</p>
+      <span class="heart">❤️</span>
+    </div>
+  </div>
+
+  <canvas id="fireworks-canvas"></canvas>
+
+  <script>
+    (function() {
+      'use strict';
+
+      const ZOMBIE_HP = 3;
+      const plantEl = document.getElementById('plant-shooter');
+      const zombieEl = document.getElementById('pig-zombie');
+      const zombieContainer = document.getElementById('zombie-container');
+      const gameContainer = document.getElementById('game-container');
+      const trophyWrapper = document.getElementById('trophy-wrapper');
+      const trophyEl = document.getElementById('trophy');
+      const valentineOverlay = document.getElementById('valentine-overlay');
+      const fireworksCanvas = document.getElementById('fireworks-canvas');
+
+      let zombieHP = ZOMBIE_HP;
+      let hitCount = 0;
+      let zombieDead = false;
+      let valentineShown = false;
+
+      function getZombieRect() {
+        const rect = zombieContainer.getBoundingClientRect();
+        return {
+          left: rect.left + rect.width * 0.2,
+          right: rect.right - rect.width * 0.2,
+          top: rect.top + rect.height * 0.2,
+          bottom: rect.bottom - rect.height * 0.1
+        };
+      }
+
+      function createPea() {
+        const plantRect = plantEl.getBoundingClientRect();
+        const pea = document.createElement('div');
+        pea.className = 'pea';
+        const startX = plantRect.right - 20;
+        const startY = plantRect.top + plantRect.height / 2 - 10;
+        pea.style.left = startX + 'px';
+        pea.style.top = startY + 'px';
+        document.body.appendChild(pea);
+
+        const zombieRect = getZombieRect();
+        const endX = (zombieRect.left + zombieRect.right) / 2 - 10;
+        const endY = (zombieRect.top + zombieRect.bottom) / 2 - 10;
+
+        const duration = 900;
+        const startTime = performance.now();
+
+        function animatePea(time) {
+          const t = Math.min((time - startTime) / duration, 1);
+          const easeT = t;
+          const x = startX + (endX - startX) * easeT;
+          const y = startY + (endY - startY) * easeT;
+          pea.style.left = x + 'px';
+          pea.style.top = y + 'px';
+
+          if (t < 1) {
+            requestAnimationFrame(animatePea);
+            return;
+          }
+
+          pea.remove();
+          if (!zombieDead) {
+            hitZombie(endX + 10, endY + 10);
+          }
+        }
+        requestAnimationFrame(animatePea);
+      }
+
+      function spawnHitParticles(x, y) {
+        const colors = ['#90ee90', '#228b22', '#ffeb3b'];
+        for (let i = 0; i < 12; i++) {
+          const p = document.createElement('div');
+          p.className = 'hit-particle';
+          p.style.left = x + 'px';
+          p.style.top = y + 'px';
+          p.style.background = colors[i % colors.length];
+          const angle = (i / 12) * Math.PI * 2;
+          const dist = 30 + Math.random() * 20;
+          const endX = x + Math.cos(angle) * dist;
+          const endY = y + Math.sin(angle) * dist;
+          document.body.appendChild(p);
+          requestAnimationFrame(() => {
+            p.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
+            p.style.transform = `translate(${endX - x}px, ${endY - y}px) scale(0)`;
+            p.style.opacity = '0';
+            setTimeout(() => p.remove(), 500);
+          });
+        }
+      }
+
+      function hitZombie(x, y) {
+        if (zombieDead) return;
+        zombieHP--;
+        hitCount++;
+        zombieEl.classList.add('hit');
+        setTimeout(() => zombieEl.classList.remove('hit'), 200);
+        spawnHitParticles(x, y);
+
+        if (zombieHP <= 0) {
+          zombieDead = true;
+          zombieEl.classList.add('dead');
+          setTimeout(() => {
+            zombieContainer.style.visibility = 'hidden';
+            trophyWrapper.classList.add('visible');
+          }, 800);
+        }
+      }
+
+      function shoot() {
+        if (zombieDead) return;
+        plantEl.classList.add('shoot');
+        setTimeout(() => plantEl.classList.remove('shoot'), 300);
+        createPea();
+      }
+
+      plantEl.addEventListener('click', shoot);
+
+      trophyEl.addEventListener('click', () => {
+        if (valentineShown) return;
+        valentineShown = true;
+        valentineOverlay.classList.add('visible');
+        startFireworks();
+      });
+
+      function startFireworks() {
+        const ctx = fireworksCanvas.getContext('2d');
+        fireworksCanvas.width = window.innerWidth;
+        fireworksCanvas.height = window.innerHeight;
+
+        const particles = [];
+        const colors = ['#ff69b4', '#ff1493', '#ffb6c1', '#ffeb3b', '#ff6b6b'];
+
+        function createFirework(x, y) {
+          const count = 80 + Math.floor(Math.random() * 40);
+          for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + Math.random();
+            const speed = 3 + Math.random() * 6;
+            particles.push({
+              x, y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              color: colors[Math.floor(Math.random() * colors.length)],
+              life: 1,
+              decay: 0.015 + Math.random() * 0.02
+            });
+          }
+        }
+
+        let frame = 0;
+        function loop() {
+          ctx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+          if (frame % 60 === 0 && frame < 300) {
+            createFirework(
+              Math.random() * fireworksCanvas.width,
+              Math.random() * fireworksCanvas.height * 0.6
+            );
+          }
+          for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.1;
+            p.life -= p.decay;
+            if (p.life <= 0) {
+              particles.splice(i, 1);
+              continue;
+            }
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+          frame++;
+          if (frame < 400 || particles.length > 0) requestAnimationFrame(loop);
+        }
+        loop();
+      }
+
+      window.addEventListener('resize', () => {
+        if (valentineShown && fireworksCanvas.getContext('2d')) {
+          fireworksCanvas.width = window.innerWidth;
+          fireworksCanvas.height = window.innerHeight;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
